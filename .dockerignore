@@ -1,0 +1,10 @@
+.git
+.github
+.azure
+dist
+node_modules
+playwright-report
+reports
+test-results
+browser-test-output.txt
+*.log

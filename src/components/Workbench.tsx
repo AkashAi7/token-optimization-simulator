@@ -1,0 +1,36 @@
+import { lazy, Suspense, useState } from 'react'
+import { Braces, ChevronDown, ChevronRight, CircleAlert, CircleCheck, Code2, Files, FileCode2, FileJson, FileText, FlaskConical, Folder, GitBranch, PanelLeftClose, Play, Search, Settings2, Sparkles } from 'lucide-react'
+import { fullInstructions, leanInstructions } from '../simulation'
+import type { Lab } from '../useLab'
+import { ChatPanel } from './ChatPanel'
+
+const CodeEditor = lazy(() => import('./CodeEditor'))
+
+export function Workbench({ lab, onTools, onPalette }: { lab: Lab; onTools: () => void; onPalette: () => void }) {
+  const [explorer, setExplorer] = useState(true)
+  const [mobileTab, setMobileTab] = useState('chat')
+  const [bottomTab, setBottomTab] = useState('problems')
+  const [testOutput, setTestOutput] = useState('')
+  const { scenario, activeFile, levers } = lab
+  const instructions = activeFile.endsWith('.md')
+  const source = activeFile === scenario.file
+  const files = [scenario.file, scenario.testFile, '.github/copilot-instructions.md', 'package.json']
+  const value = source ? lab.code : instructions ? (levers.instructions ? leanInstructions : fullInstructions) : activeFile === scenario.testFile ? scenario.testCode : JSON.stringify({ name: scenario.repo, scripts: { test: 'vitest run' }, devDependencies: { vitest: '^3.0.0' } }, null, 2)
+
+  function checkFixture() {
+    setBottomTab('terminal')
+    setTestOutput(lab.applied ? `REFERENCE CHECKS PASSED\n${scenario.testResult}` : lab.code === scenario.code ? 'REFERENCE CHECK FAILED\nThe original fixture still contains the regression.' : 'CUSTOM EDIT DETECTED\nArbitrary code is not executed in this simulator. Apply the reference patch to check the fixture.')
+  }
+
+  return <section className="workbench" aria-label="VS Code workspace replica">
+    <div className="window-titlebar"><Code2 size={18} className="vscode-mark" /><div className="window-menu"><span>File</span><span>Edit</span><span>View</span></div><button className="command-search" onClick={onPalette} aria-label="Open command palette"><Search size={12} /><span>{scenario.repo}</span><kbd>Ctrl K</kbd></button><span className="replica-tag">SIMULATED WORKSPACE</span></div>
+    <div className="mobile-editor-tabs" role="group" aria-label="Workspace pane"><button aria-pressed={mobileTab === 'code'} onClick={() => setMobileTab('code')}><Code2 size={14} />Editor</button><button aria-pressed={mobileTab === 'chat'} onClick={() => setMobileTab('chat')}><Sparkles size={14} />Copilot Chat</button></div>
+    <div className={`workbench-body ${explorer ? '' : 'explorer-hidden'} mobile-${mobileTab}`}>
+      <nav className="activity-bar" aria-label="Editor views"><button className={explorer ? 'active' : ''} aria-label="Toggle Explorer" title="Explorer" onClick={() => setExplorer(!explorer)}><Files size={21} /></button><button aria-label="Search workspace" title="Search" onClick={onPalette}><Search size={21} /></button><button aria-label="View changes" title="Source control" onClick={() => { lab.setActiveFile(scenario.file); setBottomTab('problems'); lab.setNotice(lab.applied ? '1 changed file: reference fix applied.' : 'No applied changes yet.') }}><GitBranch size={21} /></button><button aria-label="Check reference fixture" title="Reference checks" onClick={checkFixture}><FlaskConical size={21} /></button><button className="activity-bottom" aria-label="Workspace settings" title="Configure tools" onClick={onTools}><Settings2 size={21} /></button></nav>
+      {explorer && <aside className="file-explorer"><div className="explorer-heading">EXPLORER<button className="icon-button dark" aria-label="Collapse Explorer" title="Collapse Explorer" onClick={() => setExplorer(false)}><PanelLeftClose size={13} /></button></div><div className="repo-folder"><ChevronDown size={12} /><span>{scenario.repo}</span></div><div className="file-folder"><ChevronDown size={12} /><Folder size={13} />src</div>{files.slice(0, 2).map((file) => <button className={`file-row ${activeFile === file ? 'selected' : ''}`} key={file} onClick={() => lab.setActiveFile(file)}><span className="typescript-icon">TS</span><span>{file.split('/').at(-1)}</span>{lab.applied && file === scenario.file && <small>M</small>}</button>)}<div className="file-folder"><ChevronDown size={12} /><Folder size={13} />.github</div><button className={`file-row instructions-row ${instructions ? 'selected' : ''}`} onClick={() => lab.setActiveFile(files[2])} title="copilot-instructions.md"><FileText size={13} /><span>copilot-instructions.md</span></button><button className={`file-row package-row ${activeFile === 'package.json' ? 'selected' : ''}`} onClick={() => lab.setActiveFile('package.json')}><FileJson size={13} /><span>package.json</span></button><div className="explorer-foot"><GitBranch size={12} /> fix/{scenario.id}</div></aside>}
+      <div className="editor-pane"><div className="editor-tabbar"><span><FileCode2 size={13} />{activeFile.split('/').at(-1)}{source && lab.applied && <small>M</small>}</span><button className="icon-button dark" title="Check reference fixture" aria-label="Run reference checks" onClick={checkFixture}><Play size={13} /></button></div><div className="breadcrumbs">{activeFile.split('/').map((part, index) => <span key={part}>{index > 0 && <ChevronRight size={11} />}{part}</span>)}</div><div className="monaco-container"><Suspense fallback={<div className="editor-loading">Opening editor...</div>}><CodeEditor path={`${scenario.repo}/${activeFile}`} value={value} onChange={source ? lab.setCode : undefined} readOnly={!source} /></Suspense></div>{instructions && <button className="instruction-action" disabled={lab.running} onClick={() => lab.setLever('instructions', !levers.instructions)}><FileText size={13} />{levers.instructions ? 'Restore full instruction fixture' : 'Use short, stable instructions'}</button>}<div className="editor-bottom-panel"><div className="panel-tabs"><button className={bottomTab === 'problems' ? 'selected' : ''} onClick={() => setBottomTab('problems')}>PROBLEMS <span>{lab.applied ? 0 : 1}</span></button><button className={bottomTab === 'terminal' ? 'selected' : ''} onClick={() => setBottomTab('terminal')}>OUTPUT</button></div>{bottomTab === 'problems' ? <div className={`problem-line ${lab.applied ? 'resolved' : ''}`}>{lab.applied ? <CircleCheck size={13} /> : <CircleAlert size={13} />}<span>{lab.applied ? 'Reference regression resolved.' : `${scenario.testFile.split('/').at(-1)}: failing fixture assertion`}</span></div> : <pre className="fixture-output">{testOutput || 'Reference checks have not been run.'}</pre>}</div></div>
+      <ChatPanel lab={lab} onTools={onTools} />
+    </div>
+    <div className="editor-statusbar"><span><GitBranch size={12} /> fix/{scenario.id}</span><span>{lab.applied ? <CircleCheck size={12} /> : <CircleAlert size={12} />}{lab.applied ? '0' : '1'}</span><span className="statusbar-right"><Braces size={12} />{instructions ? 'Markdown' : 'TypeScript'}<span>UTF-8</span><Sparkles size={12} />{levers.auto ? 'Auto' : 'Copilot'}</span></div>
+  </section>
+}
