@@ -6,6 +6,10 @@ The lab pairs a VS Code-style workspace powered by Monaco with a Copilot CLI-sty
 
 **This is an educational replica, not the actual VS Code or Copilot CLI.** No credentials, model API, backend, or shell access are needed. Responses and AIC estimates are deterministic fixtures, not measured usage, benchmarks, billing quotes, or savings guarantees.
 
+## Live App
+
+The simulator is deployed to Azure Container Apps at <https://azcaqx2mzczfdzema.redisland-bf3a9233.eastus2.azurecontainerapps.io/>.
+
 ## Run Locally
 
 Use Node.js 24 LTS and npm. Node's built-in TypeScript support is used by the unit tests.
@@ -110,7 +114,7 @@ For hosting under a subpath, build with the matching base, for example:
 npm run build -- --base=/token-lab/
 ```
 
-The app uses query parameters, not client-side route paths. A share link on localhost only works on the same machine; customer-accessible links require a publicly reachable hosted URL. No public deployment is included in this workspace.
+The app uses query parameters, not client-side route paths. A share link on localhost only works on the same machine; use the Azure Container Apps URL above for customer-accessible links.
 
 ## Data and Sources
 
